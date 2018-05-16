@@ -95,6 +95,7 @@ const (
 	MSG_FILE_IS_BINARY   = "This is a binary file"
 	MSG_FILE_DIFFERS     = "File differs"
 	MSG_BIN_FILE_DIFFERS = "File differs. This is a binary file"
+	MSG_BIN_FILE_SIZE_DIFFERS = "Binary file size diff"
 	MSG_FILE_IDENTICAL   = "Files are the same"
 	MSG_FILE_TOO_BIG     = "File too big"
 	MSG_THIS_IS_DIR      = "This is a directory"
@@ -208,6 +209,7 @@ var (
 	flag_cmp_ignore_blank_lines  bool = false
 	flag_cmp_ignore_space_change bool = false
 	flag_cmp_ignore_all_space    bool = false
+	flag_cmp_ignore_binary_size    bool = false
 	flag_unicode_case_and_space  bool = false
 	flag_show_identical_files    bool = false
 	flag_suppress_line_changes   bool = false
@@ -289,6 +291,7 @@ func main() {
 	flag.IntVar(&flag_max_goroutines, "g", flag_max_goroutines, "Max number of goroutines to use for file comparison")
 	flag.BoolVar(&flag_cmp_ignore_space_change, "b", flag_cmp_ignore_space_change, "Ignore changes in the amount of white space")
 	flag.BoolVar(&flag_cmp_ignore_all_space, "w", flag_cmp_ignore_all_space, "Ignore all white space")
+	flag.BoolVar(&flag_cmp_ignore_binary_size, "size", flag_cmp_ignore_binary_size, "Ignore binary size")
 	flag.BoolVar(&flag_cmp_ignore_case, "i", flag_cmp_ignore_case, "Ignore case differences in file contents")
 	flag.BoolVar(&flag_cmp_ignore_blank_lines, "B", flag_cmp_ignore_blank_lines, "Ignore changes whose lines are all blank")
 	flag.BoolVar(&flag_unicode_case_and_space, "unicode", flag_unicode_case_and_space, "Apply unicode rules for white space and upper/lower case")
@@ -1939,9 +1942,22 @@ func diff_file(filename1, filename2 string, finfo1, finfo2 os.FileInfo) {
 			msg2 = MSG_FILE_DIFFERS
 		}
 
-		if msg1 != "" || msg2 != "" {
-			output_diff_message(filename1, filename2, finfo1, finfo2, msg1, msg2, true)
+		if flag_cmp_ignore_binary_size {
+			if finfo1.Size() == finfo2.Size() {
+				msg1 = ""
+				msg2 = ""
+			} else {
+				msg1 = MSG_BIN_FILE_DIFFERS
+				msg2 = MSG_BIN_FILE_SIZE_DIFFERS
+				println("abc="+filename1)
+				output_diff_message(filename1, filename2, finfo1, finfo2, msg1, msg2, true)
+			}
+		} else {
+			if msg1 != "" || msg2 != "" {
+				output_diff_message(filename1, filename2, finfo1, finfo2, msg1, msg2, true)
+			}
 		}
+
 	} else {
 		// Compute equiv ids for each line.
 		info1, info2 := find_equiv_lines(lines1, lines2)
